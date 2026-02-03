@@ -42,3 +42,51 @@ resource "aws_lambda_function" "func_hello_world" {
   filename         = data.archive_file.func_hello_world_src_zip.output_path
   source_code_hash = data.archive_file.func_hello_world_src_zip.output_base64sha256
 }
+
+# --- func_with_dep
+# src/ 配下コードのハッシュを計算するための zip アーカイブ
+data "archive_file" "func_with_dep_src_zip" {
+  type        = "zip"
+  source_dir  = "${path.root}/func_with_dep/src"
+  output_path = "${path.root}/func_with_dep/archive.zip"
+
+  excludes = [
+    "*.pyc",
+    "**/__pycache__/",
+  ]
+}
+
+resource "terraform_data" "func_with_dep_sam_build" {
+  triggers_replace = [
+    timestamp(),
+    data.archive_file.func_with_dep_src_zip.output_base64sha256,
+  ]
+
+  provisioner "local-exec" {
+    command     = "sam build"
+    working_dir = "${path.root}/func_with_dep"
+  }
+}
+
+# sam build で生成された成果物の zip アーカイブ (これが最終的に Lambda 関数で使われる)
+data "archive_file" "func_with_dep_sam_build_zip" {
+  depends_on = [terraform_data.func_with_dep_sam_build]
+
+  type        = "zip"
+  source_dir  = "${path.root}/func_with_dep/.aws-sam/build/HelloWorldFunction"
+  output_path = "${path.root}/func_with_dep/archive_sam_build.zip"
+
+  excludes = [
+    "*.pyc",
+    "**/__pycache__/",
+  ]
+}
+
+resource "aws_lambda_function" "func_with_dep" {
+  function_name    = "func_with_dep"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "app.lambda_handler"
+  runtime          = "python3.14"
+  filename         = data.archive_file.func_with_dep_sam_build_zip.output_path
+  source_code_hash = data.archive_file.func_with_dep_sam_build_zip.output_base64sha256
+}
