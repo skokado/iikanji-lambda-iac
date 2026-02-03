@@ -26,7 +26,7 @@ resource "terraform_data" "func_with_dep_sam_build_archive" {
   provisioner "local-exec" {
     when        = create
     command     = "zip -r ../../../archive.zip ."
-    working_dir = "${path.root}/func_with_dep/.aws-sam/build/HelloWorldFunction"
+    working_dir = "${path.root}/func_with_dep/.aws-sam/build/HelloWorldFunction" # "HelloWorldFunction" は template.yaml のリソース名と対応している。変更可能
   }
 }
 
