@@ -50,7 +50,7 @@ resource "terraform_data" "func_with_layer_sam_build_archive" {
 
   provisioner "local-exec" {
     when        = create
-    command     = "sam build"
+    command     = "sam build Function"
     working_dir = "${path.root}/func_with_layer"
   }
 
